@@ -139,8 +139,20 @@ if partido_selecionado:
             proposicoes = resultado["dados"]
             has_next = resultado["has_next"]
             total = resultado.get("total_count", 0)
+            contagem = resultado.get("contagem_situacoes", {})
             
-        st.markdown(f"**Total de projetos encontrados:** {total}")
+        st.markdown(f"**Total de projetos listados (com os filtros atuais):** {total}")
+        
+        if contagem:
+            with st.expander("📊 Ver estatísticas de projetos por Situação (no ano selecionado)"):
+                cod_para_nome = {int(v): k for k, v in opcoes_situacoes.items() if str(v).isdigit()}
+                contagem_ordenada = sorted(contagem.items(), key=lambda x: x[1], reverse=True)
+                
+                cols = st.columns(2)
+                for i, (cod, qtd) in enumerate(contagem_ordenada):
+                    nome_sit = cod_para_nome.get(cod, f"Situação Desconhecida (cód: {cod})")
+                    cols[i % 2].write(f"- **{nome_sit}:** {qtd}")
+
         st.divider()
         
         if not proposicoes:

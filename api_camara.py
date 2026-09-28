@@ -127,9 +127,15 @@ def get_proposicoes_por_deputado(id_autor: int, ano: Optional[int] = None, cod_s
             db_info[str(d[0])] = {"cod_situacao": d[1], "ano": d[2]}
             
     filtradas = []
+    contagem_situacoes = {}
+    
     for p in todas:
         info = db_info.get(str(p['id']), {})
         sit = info.get("cod_situacao")
+        
+        if sit is not None:
+            contagem_situacoes[sit] = contagem_situacoes.get(sit, 0) + 1
+            
         if cod_situacao and sit != int(cod_situacao):
             continue
         filtradas.append(p)
@@ -144,7 +150,8 @@ def get_proposicoes_por_deputado(id_autor: int, ano: Optional[int] = None, cod_s
     return {
         "dados": pagina_dados,
         "has_next": has_next,
-        "total_count": total_count
+        "total_count": total_count,
+        "contagem_situacoes": contagem_situacoes
     }
 
 @st.cache_data(ttl=86400)
