@@ -150,7 +150,7 @@ def get_proposicoes_por_deputado(id_autor: int, ano: Optional[int] = None, cod_s
 @st.cache_data(ttl=86400)
 def get_situacoes_proposicao() -> List[Dict]:
     """Retorna as situações possíveis de uma proposição para filtro."""
-    url = f"{BASE_URL}/referencias/situacoesProposicao"
+    url = f"{BASE_URL}/referencias/proposicoes/codSituacao"
     response = session.get(url, timeout=15)
     if response.status_code == 200:
         return response.json().get("dados", [])

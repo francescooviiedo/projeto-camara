@@ -123,7 +123,7 @@ if partido_selecionado:
         with col_situacao:
             situacoes = get_situacoes_proposicao()
             situacoes = sorted(situacoes, key=lambda x: x.get('nome', ''))
-            opcoes_situacoes = {s['nome']: s['cod'] for s in situacoes if s.get('nome')}
+            opcoes_situacoes = {s['nome']: s['cod'] for s in situacoes if s.get('nome') and str(s.get('cod', '')).strip()}
             sit_opcao = st.selectbox("Filtrar por Situação", ["Todas"] + list(opcoes_situacoes.keys()))
             sit_filtro = None if sit_opcao == "Todas" else opcoes_situacoes[sit_opcao]
             
@@ -161,9 +161,15 @@ if partido_selecionado:
                     col_info1, col_info2 = st.columns(2)
                     with col_info1:
                         st.write(f"**Data de Apresentação:** {prop.get('dataApresentacao', '')[:10]}")
+                        
+                        situacao = status_prop.get('descricaoSituacao')
+                        if not situacao:
+                            situacao = "Não informada (Tramitando)"
+                        st.write(f"**Situação Oficial (Filtro):** {situacao}")
+                        
                     with col_info2:
-                        situacao = status_prop.get('descricaoTramitacao') or "Em tramitação"
-                        st.write(f"**Situação Atual:** {situacao}")
+                        ultima_acao = status_prop.get('descricaoTramitacao') or "Sem movimentação"
+                        st.write(f"**Última Tramitação:** {ultima_acao}")
                         
                     if url_doc:
                         st.markdown(f"[🔗 **Ler Documento Oficial (PDF) Completo**]({url_doc})")
