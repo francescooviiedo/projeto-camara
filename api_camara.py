@@ -63,8 +63,8 @@ def get_deputados_por_partido(sigla_partido: str, id_legislatura: int = 57) -> L
         
     return deputados
 
-def get_proposicoes_por_deputado(id_autor: int, ano: Optional[int] = None, pagina: int = 1, itens: int = 10) -> Dict:
-    """Busca projetos de lei propostos pelo deputado, com suporte a filtro de ano e paginação."""
+def get_proposicoes_por_deputado(id_autor: int, ano: Optional[int] = None, cod_situacao: Optional[int] = None, pagina: int = 1, itens: int = 10) -> Dict:
+    """Busca projetos de lei propostos pelo deputado, com suporte a filtros e paginação."""
     url = f"{BASE_URL}/proposicoes"
     params = {
         "idDeputadoAutor": id_autor,
@@ -76,6 +76,8 @@ def get_proposicoes_por_deputado(id_autor: int, ano: Optional[int] = None, pagin
     
     if ano:
         params["ano"] = ano
+    if cod_situacao:
+        params["codSituacao"] = cod_situacao
         
     response = session.get(url, params=params, timeout=15)
     response.raise_for_status()
@@ -84,10 +86,22 @@ def get_proposicoes_por_deputado(id_autor: int, ano: Optional[int] = None, pagin
     links = payload.get("links", [])
     has_next = any(link["rel"] == "next" for link in links)
     
+    total_count = response.headers.get("x-total-count", 0)
+    
     return {
         "dados": payload.get("dados", []),
-        "has_next": has_next
+        "has_next": has_next,
+        "total_count": int(total_count) if total_count else 0
     }
+
+@st.cache_data(ttl=86400)
+def get_situacoes_proposicao() -> List[Dict]:
+    """Retorna as situações possíveis de uma proposição para filtro."""
+    url = f"{BASE_URL}/referencias/situacoesProposicao"
+    response = session.get(url, timeout=15)
+    if response.status_code == 200:
+        return response.json().get("dados", [])
+    return []
 
 @st.cache_data(ttl=3600)
 def get_proposicao_detalhes(id_proposicao: int) -> Optional[Dict]:

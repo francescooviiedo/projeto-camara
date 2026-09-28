@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Carrega as variáveis de ambiente do .env
 load_dotenv()
 
-from api_camara import get_partidos, get_deputados_por_partido, get_proposicoes_por_deputado, get_proposicao_detalhes, get_votos_deputado
+from api_camara import get_partidos, get_deputados_por_partido, get_proposicoes_por_deputado, get_proposicao_detalhes, get_votos_deputado, get_situacoes_proposicao
 from database import get_resumo, save_resumo
 from ai_summarizer import summarize_proposicao
 st.set_page_config(page_title="Transparência Legislativa", layout="wide")
@@ -115,23 +115,34 @@ if partido_selecionado:
             * **Transformado em Norma Jurídica:** Sucesso total. Passou pela Câmara, pelo Senado e foi sancionado pelo Presidente. Virou Lei.
             """)
         
-        col_ano, col_empty = st.columns([1, 3])
+        col_ano, col_situacao = st.columns(2)
         with col_ano:
             ano_opcao = st.selectbox("Filtrar por Ano", ["Todos", 2026, 2025, 2024, 2023, 2022, 2021, 2020])
             ano_filtro = None if ano_opcao == "Todos" else ano_opcao
             
-        # Estado de paginação baseado no deputado e no filtro de ano
-        state_key = f"pagina_{deputado['id']}_{ano_filtro}"
+        with col_situacao:
+            situacoes = get_situacoes_proposicao()
+            situacoes = sorted(situacoes, key=lambda x: x.get('nome', ''))
+            opcoes_situacoes = {s['nome']: s['cod'] for s in situacoes if s.get('nome')}
+            sit_opcao = st.selectbox("Filtrar por Situação", ["Todas"] + list(opcoes_situacoes.keys()))
+            sit_filtro = None if sit_opcao == "Todas" else opcoes_situacoes[sit_opcao]
+            
+        # Estado de paginação baseado no deputado e nos filtros
+        state_key = f"pagina_{deputado['id']}_{ano_filtro}_{sit_filtro}"
         if state_key not in st.session_state:
             st.session_state[state_key] = 1
             
         pagina_atual = st.session_state[state_key]
 
         with st.spinner("Buscando projetos de lei..."):
-            resultado = get_proposicoes_por_deputado(deputado['id'], ano=ano_filtro, pagina=pagina_atual)
+            resultado = get_proposicoes_por_deputado(deputado['id'], ano=ano_filtro, cod_situacao=sit_filtro, pagina=pagina_atual)
             proposicoes = resultado["dados"]
             has_next = resultado["has_next"]
+            total = resultado.get("total_count", 0)
             
+        st.markdown(f"**Total de projetos encontrados:** {total}")
+        st.divider()
+        
         if not proposicoes:
             st.info("Nenhuma proposição encontrada com estes filtros.")
         else:
