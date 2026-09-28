@@ -70,6 +70,33 @@ if partido_selecionado:
                     cor = "green" if v['voto'] == "Sim" else "red" if v['voto'] == "Não" else "orange"
                     st.markdown(f"**Data:** {v['data'][:10]} | **Voto:** :{cor}[**{v['voto']}**]")
                     st.write(f"{v['descricao']}")
+                    
+                    id_prop = v['id'].split('-')[0]
+                    try:
+                        id_prop_int = int(id_prop)
+                        detalhes = get_proposicao_detalhes(id_prop_int) or {}
+                        url_doc = detalhes.get("urlInteiroTeor")
+                        
+                        if url_doc:
+                            st.markdown(f"[🔗 **Ler Documento Oficial (PDF) Completo**]({url_doc})")
+                            if st.button(f"✨ Explicar com IA (Simplificar)", key=f"btn_v_{v['id']}"):
+                                if not os.environ.get("GEMINI_API_KEY"):
+                                    st.warning("⚠️ Você precisa configurar a Gemini API Key na barra lateral esquerda primeiro!")
+                                else:
+                                    resumo_cache = get_resumo(id_prop_int)
+                                    if resumo_cache:
+                                        st.success("⚡ Resumo recuperado instantaneamente do banco de dados (Cache):")
+                                        st.write(resumo_cache)
+                                    else:
+                                        with st.spinner("Processando... Baixando PDF original e acionando o Gemini (isso pode levar alguns segundos)..."):
+                                            resumo_novo = summarize_proposicao(url_doc)
+                                            if not str(resumo_novo).startswith("Erro") and "Trava de segurança" not in str(resumo_novo):
+                                                save_resumo(id_prop_int, resumo_novo)
+                                            st.info("🤖 Explicação gerada pela IA:")
+                                            st.write(resumo_novo)
+                    except Exception:
+                        pass
+                    
                     st.divider()
 
         # 4. Lista de Proposições com Filtro e Paginação

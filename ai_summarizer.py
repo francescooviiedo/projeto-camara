@@ -4,7 +4,6 @@ import pdfplumber
 import google.generativeai as genai
 import os
 
-MAX_CHARS_LIMIT = 15000
 
 def configurar_gemini():
     api_key = os.environ.get("GEMINI_API_KEY")
@@ -28,12 +27,14 @@ def extract_text_from_url(url: str) -> str:
     text_content = ""
     try:
         with pdfplumber.open(io.BytesIO(response.content)) as pdf:
+            if len(pdf.pages) > 10:
+                raise Exception(f"Trava de segurança ativada: O documento tem {len(pdf.pages)} páginas. O limite atual é de 10 páginas para evitar alto custo e lentidão na API.")
             for page in pdf.pages:
                 page_text = page.extract_text()
                 if page_text:
                     text_content += page_text + "\n"
     except Exception as e:
-        raise Exception(f"Falha ao ler o PDF. Formato não suportado: {e}")
+        raise Exception(f"Falha ao ler o PDF ou excedeu limite: {e}")
                 
     return text_content
 
@@ -42,15 +43,10 @@ def summarize_proposicao(url_inteiro_teor: str) -> str:
     try:
         texto = extract_text_from_url(url_inteiro_teor)
     except Exception as e:
-        return f"Erro ao tentar ler o documento original: {e}"
+        return str(e)
         
     if not texto.strip():
         return "O documento não contém texto extraível ou é uma imagem escaneada."
-        
-    if len(texto) > MAX_CHARS_LIMIT:
-        return (f"**Trava de segurança ativada:** Este documento é muito extenso ({len(texto)} caracteres). "
-                f"O resumo automático não está disponível para textos acima de {MAX_CHARS_LIMIT} caracteres "
-                f"para evitar alto custo e lentidão na API.")
                 
     try:
         configurar_gemini()
