@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 # Carrega as variáveis de ambiente do .env
 load_dotenv()
 
-from api_camara import get_partidos, get_deputados_por_partido, get_proposicoes_por_deputado, get_proposicao_detalhes
+from api_camara import get_partidos, get_deputados_por_partido, get_proposicoes_por_deputado, get_proposicao_detalhes, get_votos_deputado
 from database import get_resumo, save_resumo
 from ai_summarizer import summarize_proposicao
 st.set_page_config(page_title="Transparência Legislativa", layout="wide")
@@ -58,8 +58,22 @@ if partido_selecionado:
             
         st.divider()
         
-        # 3. Lista de Proposições com Filtro e Paginação
-        st.subheader("3. Projetos Propostos")
+        # 3. Últimas Votações
+        st.subheader("3. Últimas Votações (Plenário)")
+        with st.spinner("Buscando votos nas últimas votações nominais..."):
+            votos_recente = get_votos_deputado(deputado['id'])
+            
+            if not votos_recente:
+                st.info("Nenhuma votação nominal recente encontrada.")
+            else:
+                for v in votos_recente:
+                    cor = "green" if v['voto'] == "Sim" else "red" if v['voto'] == "Não" else "orange"
+                    st.markdown(f"**Data:** {v['data'][:10]} | **Voto:** :{cor}[**{v['voto']}**]")
+                    st.write(f"{v['descricao']}")
+                    st.divider()
+
+        # 4. Lista de Proposições com Filtro e Paginação
+        st.subheader("4. Projetos Propostos")
         
         with st.expander("📖 Dicionário: Entenda a 'Situação Atual' de um Projeto"):
             st.markdown("""

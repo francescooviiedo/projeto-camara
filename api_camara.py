@@ -97,3 +97,57 @@ def get_proposicao_detalhes(id_proposicao: int) -> Optional[Dict]:
     if response.status_code == 200:
         return response.json().get("dados", {})
     return None
+
+@st.cache_data(ttl=3600)
+def get_ultimas_votacoes_nominais(limite: int = 5) -> List[Dict]:
+    """Busca as últimas votações nominais da Câmara (cacheado para todos os deputados)."""
+    url_votacoes = f"{BASE_URL}/votacoes"
+    params = {
+        "ordem": "DESC",
+        "ordenarPor": "dataHoraRegistro",
+        "itens": 100
+    }
+    
+    try:
+        response = session.get(url_votacoes, params=params, timeout=15)
+        response.raise_for_status()
+        votacoes = response.json().get("dados", [])
+    except Exception:
+        return []
+        
+    nominais = []
+    for votacao in votacoes:
+        if len(nominais) >= limite:
+            break
+            
+        url_votos = f"{BASE_URL}/votacoes/{votacao['id']}/votos"
+        try:
+            resp_votos = session.get(url_votos, timeout=15)
+            if resp_votos.status_code == 200:
+                votos = resp_votos.json().get("dados", [])
+                if votos:
+                    # Salva a lista de votos dentro da votacao
+                    votacao["votos_detalhados"] = votos
+                    nominais.append(votacao)
+        except Exception:
+            continue
+            
+    return nominais
+
+def get_votos_deputado(id_deputado: int) -> List[Dict]:
+    """Busca como o deputado votou nas últimas votações nominais."""
+    nominais = get_ultimas_votacoes_nominais()
+    
+    resultados = []
+    for votacao in nominais:
+        votos = votacao.get("votos_detalhados", [])
+        voto_deputado = next((v for v in votos if v.get("deputado_", {}).get("id") == id_deputado), None)
+        
+        resultados.append({
+            "id": votacao["id"],
+            "data": votacao.get("dataHoraRegistro", votacao.get("data", "")),
+            "descricao": votacao.get("descricao", "Sem descrição"),
+            "voto": voto_deputado.get("tipoVoto") if voto_deputado else "Ausente / Não votou"
+        })
+        
+    return resultados
