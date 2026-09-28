@@ -8,8 +8,6 @@ load_dotenv()
 from api_camara import get_partidos, get_deputados_por_partido, get_proposicoes_por_deputado, get_proposicao_detalhes
 from database import get_resumo, save_resumo
 from ai_summarizer import summarize_proposicao
-from api_transparencia import get_gastos_mandato
-
 st.set_page_config(page_title="Transparência Legislativa", layout="wide")
 
 # Sidebar para Configurações
@@ -21,103 +19,13 @@ with st.sidebar:
     if api_key:
         os.environ["GEMINI_API_KEY"] = api_key
         
-    chave_transparencia_atual = os.environ.get("TRANSPARENCIA_API_KEY", "")
-    api_key_gov = st.text_input("Portal da Transparência API Key", value=chave_transparencia_atual, type="password", help="Pegue sua chave no portal da transparência")
-    if api_key_gov:
-        os.environ["TRANSPARENCIA_API_KEY"] = api_key_gov
-    
-    if chave_atual and chave_transparencia_atual:
-        st.success("✅ Chaves configuradas!")
+    if chave_atual:
+        st.success("✅ Chave configurada!")
     else:
-        st.markdown("Insira suas chaves de API para habilitar todos os recursos.")
+        st.markdown("Insira sua chave de API para habilitar todos os recursos.")
     
-    st.divider()
-    pagina = st.radio("Módulo", ["Projetos de Deputados", "Comparativo Presidencial"])
     st.divider()
     st.markdown("Desenvolvido para análise de Dados Abertos.")
-
-if pagina == "Comparativo Presidencial":
-    st.title("🏛️ Comparativo de Gastos Presidenciais (Cartão Corporativo)")
-    st.markdown("Comparação de gastos utilizando dados do Portal da Transparência.")
-    
-    col1, col2 = st.columns(2)
-    
-    mandatos = {
-        "Lula (2023-Atual)": (2023, 2026),
-        "Bolsonaro (2019-2022)": (2019, 2022),
-        "Temer (2016-2018)": (2016, 2018),
-        "Dilma (2011-2016)": (2011, 2016),
-        "Lula (2003-2010)": (2003, 2010)
-    }
-    
-    with col1:
-        st.subheader("Mandato A")
-        mandato_a = st.selectbox("Selecione o Mandato A", list(mandatos.keys()), index=1)
-    
-    with col2:
-        st.subheader("Mandato B")
-        mandato_b = st.selectbox("Selecione o Mandato B", list(mandatos.keys()), index=0)
-        
-    st.divider()
-    
-    if st.button("Buscar Comparativo"):
-        chave = os.environ.get("TRANSPARENCIA_API_KEY")
-        if not chave:
-            st.error("⚠️ Configure a chave da API do Portal da Transparência na barra lateral.")
-            st.stop()
-            
-        ano_inicio_a, ano_fim_a = mandatos[mandato_a]
-        ano_inicio_b, ano_fim_b = mandatos[mandato_b]
-        
-        c1, c2 = st.columns(2)
-        
-        with c1:
-            st.markdown(f"### {mandato_a}")
-            progress_a = st.progress(0)
-            status_a = st.empty()
-            
-            def update_a(mes, processed, total):
-                if total > 0:
-                    progress_a.progress(processed / total)
-                status_a.text(f"Buscando {mes}...")
-                
-            dados_a = get_gastos_mandato(ano_inicio_a, ano_fim_a, chave, update_callback=update_a)
-            progress_a.empty()
-            status_a.empty()
-            
-            total_a = sum(d["total"] for d in dados_a)
-            sigilo_a = sum(d["sigiloso"] for d in dados_a)
-            
-            st.metric("Total Gasto", f"R$ {total_a:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-            st.metric("Gasto Sigiloso", f"R$ {sigilo_a:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-            
-            chart_data_a = {d["mes_ano"]: d["total"] for d in dados_a}
-            st.bar_chart(chart_data_a)
-            
-        with c2:
-            st.markdown(f"### {mandato_b}")
-            progress_b = st.progress(0)
-            status_b = st.empty()
-            
-            def update_b(mes, processed, total):
-                if total > 0:
-                    progress_b.progress(processed / total)
-                status_b.text(f"Buscando {mes}...")
-                
-            dados_b = get_gastos_mandato(ano_inicio_b, ano_fim_b, chave, update_callback=update_b)
-            progress_b.empty()
-            status_b.empty()
-            
-            total_b = sum(d["total"] for d in dados_b)
-            sigilo_b = sum(d["sigiloso"] for d in dados_b)
-            
-            st.metric("Total Gasto", f"R$ {total_b:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-            st.metric("Gasto Sigiloso", f"R$ {sigilo_b:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-            
-            chart_data_b = {d["mes_ano"]: d["total"] for d in dados_b}
-            st.bar_chart(chart_data_b)
-
-    st.stop()
 
 st.title("🔎 Explorador de Projetos de Lei com IA")
 st.markdown("Navegue pelos Partidos, escolha um Deputado e veja os resumos dos seus projetos de lei recentes gerados via IA e guardados localmente no banco.")
